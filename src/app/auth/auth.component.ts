@@ -1,0 +1,78 @@
+import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
+import { NgForm } from '@angular/forms';
+import { AuthService, AuthResponseData } from './auth.service';
+import { Observable, Subscription } from 'rxjs';
+import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import * as fromApp from './../store/app.reducer';
+import * as AuthActions from './store/auth.actions';
+
+@Component({
+  templateUrl: './auth.component.html',
+  selector: 'app-auth',
+  styleUrls: ['./auth.component.css'],
+})
+export class AuthComponent implements OnInit, OnDestroy {
+  @ViewChild('f') form: NgForm;
+  isLoginMode: boolean = true;
+  isLoading: boolean = false;
+  error: string = null;
+  storeSub: Subscription;
+  constructor(private store: Store<fromApp.AppState>) {}
+
+  ngOnInit() {
+    this.storeSub = this.store.select('auth').subscribe((authState) => {
+      this.isLoading = authState.loading;
+      this.error = authState.authError;
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.storeSub) {
+      this.storeSub.unsubscribe();
+    }
+  }
+
+  onCloseModal() {
+    this.store.dispatch(new AuthActions.ClearError());
+  }
+
+  onSwitchMode() {
+    this.isLoginMode = !this.isLoginMode;
+    console.log(`Login Mode: ${this.isLoginMode}`);
+  }
+
+  onSubmit() {
+    if (!this.form.valid) {
+      return;
+    }
+    const email = this.form.value.email;
+    const password = this.form.value.password;
+
+    let authObs: Observable<AuthResponseData>;
+
+    this.isLoading = true;
+    if (!this.isLoginMode) {
+      this.store.dispatch(new AuthActions.SignupStart({ email, password }));
+    } else {
+      // Auth Service Login...
+      // authObs = this.authService.login(email, password);
+      this.store.dispatch(new AuthActions.LoginStart({ email, password }));
+    }
+
+    // authObs.subscribe(
+    //   (response) => {
+    //     this.router.navigate(['/recipes']);
+    //     this.isLoading = false;
+    //     // console.log(response);
+    //   },
+    //   (errorRes) => {
+    //     this.error = errorRes;
+    //     this.isLoading = false;
+    //     console.log(errorRes);
+    //   }
+    // );
+
+    this.form.reset();
+  }
+}
